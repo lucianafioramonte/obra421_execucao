@@ -798,9 +798,12 @@ function categoryKm(key, rows){
   return physicalKm(rows);
 }
 
-function categoryTotals(filterFn){
+function categoryTotals(filterFn, physical){
   const totals = {};
-  CATEGORY_DEFS.forEach(c=>{ totals[c.key] = categoryKm(c.key, filterFn(categoryDataset(c.key))); });
+  CATEGORY_DEFS.forEach(c=>{
+    const rows = filterFn(categoryDataset(c.key));
+    totals[c.key] = physical ? physicalKm(rows) : categoryKm(c.key, rows);
+  });
   return totals;
 }
 
@@ -823,7 +826,7 @@ function renderKPIs(){
   const dayT = categoryTotals(rows=>filterOnDate(rows, refDate));
   const weekT = categoryTotals(rows=>filterSince(rows, refDate, 7));
   const monT = categoryTotals(rows=>filterMonth(rows, refDate));
-  const totT = categoryTotals(rows=>filterUpTo(rows, refDate));
+  const totT = categoryTotals(rows=>filterUpTo(rows, refDate), true);
 
   const el = document.getElementById('kpiRow');
   el.innerHTML =
