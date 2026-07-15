@@ -922,15 +922,32 @@ function renderComparativoChart(){
   let from = fromEl.value, to = toEl.value;
   if(from > to){ const t = from; from = to; to = t; }
 
-  const buckets = computeBuckets(from, to, comparativoGranularity)
-    .map(b=>{
-      const totals = categoryTotals(rows=>filterRange(rows, b.start, b.end));
-      const sum = CATEGORY_DEFS.reduce((a,c)=>a+totals[c.key],0);
-      return {...b, totals, sum};
+  // Pré-calcula o dataset de cada categoria UMA vez (evita refazer o filtro
+  // completo de categoria a cada barra — era isso que travava em períodos longos).
+  const catRowsByKey = {};
+  CATEGORY_DEFS.forEach(c=>{ catRowsByKey[c.key] = categoryDataset(c.key); });
+
+  const rawBuckets = computeBuckets(from, to, comparativoGranularity);
+  const MAX_BUCKETS = 400;
+  const bucketsToUse = rawBuckets.length > MAX_BUCKETS ? rawBuckets.slice(-MAX_BUCKETS) : rawBuckets;
+
+  const buckets = bucketsToUse.map(b=>{
+    const totals = {};
+    CATEGORY_DEFS.forEach(c=>{
+      totals[c.key] = categoryKm(c.key, filterRange(catRowsByKey[c.key], b.start, b.end));
     });
+    const sum = CATEGORY_DEFS.reduce((a,c)=>a+totals[c.key],0);
+    return {...b, totals, sum};
+  });
 
   container.innerHTML = '';
   if(!buckets.length) return;
+  if(rawBuckets.length > MAX_BUCKETS){
+    const warn = document.createElement('div');
+    warn.style.cssText = 'font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);margin-bottom:8px;';
+    warn.textContent = `Período muito longo pra granularidade diária (${rawBuckets.length} dias) — mostrando os últimos ${MAX_BUCKETS}. Troque para Semanal ou Mensal pra ver o período inteiro.`;
+    container.appendChild(warn);
+  }
 
   const barSlot = 36, barWidth = 22, chartH = 190, padTop = 16, padBottom = 30, padLeft = 8, padRight = 8;
   const W = Math.max(320, buckets.length*barSlot + padLeft + padRight);
