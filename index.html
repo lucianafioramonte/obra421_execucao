@@ -843,6 +843,7 @@ function renderPeriodSummary(){
   const fromEl = document.getElementById('periodFrom');
   const toEl = document.getElementById('periodTo');
   if(!fromEl || !toEl || !fromEl.value || !toEl.value) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fromEl.value) || !/^\d{4}-\d{2}-\d{2}$/.test(toEl.value)) return;
   let from = fromEl.value, to = toEl.value;
   if(from > to){ const t = from; from = to; to = t; }
   const totals = categoryTotals(rows=>filterRange(rows, from, to));
@@ -875,9 +876,10 @@ let comparativoGranularity = 'daily';
 function computeBuckets(fromDate, toDate, gran){
   const buckets = [];
   const endD = parseISO(toDate);
+  const HARD_LIMIT = 3000; // proteção: nunca gera mais que isso, não importa a data digitada
   if(gran === 'daily'){
     let d = parseISO(fromDate);
-    while(d <= endD){
+    while(d <= endD && buckets.length < HARD_LIMIT){
       const iso = d.toISOString().slice(0,10);
       buckets.push({start: iso, end: iso, label: fmtBRshort(iso)});
       d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
@@ -886,7 +888,7 @@ function computeBuckets(fromDate, toDate, gran){
     let d = parseISO(fromDate);
     const day0 = (d.getDay()+6)%7;
     d = new Date(d.getFullYear(), d.getMonth(), d.getDate()-day0);
-    while(d <= endD){
+    while(d <= endD && buckets.length < HARD_LIMIT){
       const wEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate()+6);
       const s = d.toISOString().slice(0,10);
       const e = wEnd.toISOString().slice(0,10);
@@ -899,7 +901,7 @@ function computeBuckets(fromDate, toDate, gran){
     }
   } else {
     let d = new Date(parseISO(fromDate).getFullYear(), parseISO(fromDate).getMonth(), 1);
-    while(d <= endD){
+    while(d <= endD && buckets.length < HARD_LIMIT){
       const mEnd = new Date(d.getFullYear(), d.getMonth()+1, 0);
       const s = d.toISOString().slice(0,10);
       const e = mEnd.toISOString().slice(0,10);
@@ -919,6 +921,7 @@ function renderComparativoChart(){
   const toEl = document.getElementById('periodTo');
   const container = document.getElementById('comparativoChart');
   if(!fromEl || !toEl || !container || !fromEl.value || !toEl.value) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fromEl.value) || !/^\d{4}-\d{2}-\d{2}$/.test(toEl.value)) return;
   let from = fromEl.value, to = toEl.value;
   if(from > to){ const t = from; from = to; to = t; }
 
@@ -1684,6 +1687,23 @@ document.getElementById('btnToday').addEventListener('click', ()=>{
 });
 
 function onPeriodChange(){
+  const fromEl = document.getElementById('periodFrom');
+  const toEl = document.getElementById('periodTo');
+  const {min, max} = dataExtentDates();
+  const isValidISO = v => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+  // Enquanto o ano está sendo digitado dígito a dígito, o navegador pode
+  // reportar um valor incompleto ou um ano minúsculo — não processa nesse caso.
+  if(fromEl.value && isValidISO(fromEl.value)){
+    if(fromEl.value < min) fromEl.value = min;
+    if(fromEl.value > max) fromEl.value = max;
+  }
+  if(toEl.value && isValidISO(toEl.value)){
+    if(toEl.value < min) toEl.value = min;
+    if(toEl.value > max) toEl.value = max;
+  }
+  if(!isValidISO(fromEl.value) || !isValidISO(toEl.value)) return;
+
   renderPeriodSummary();
   renderComparativoChart();
   updatePlanta();
