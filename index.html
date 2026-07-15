@@ -821,13 +821,14 @@ function renderKPIs(){
   const monT = categoryTotals(rows=>filterMonth(rows, refDate));
   const totT = categoryTotals(rows=>filterUpTo(rows, refDate), true);
   const asfaltoProntoKm = layerCoverageKm({ds:'asfalto', field:'Camada', value:'2ª CAMADA'}, refDate);
+  const totTAjustado = {...totT, asfalto: asfaltoProntoKm};
 
   const el = document.getElementById('kpiRow');
   el.innerHTML =
     renderKpiCard('Executado no dia', fmtBR(refDate), dayT) +
     renderKpiCard('Executado nos 7 dias anteriores', 'até '+fmtBR(refDate), weekT) +
     renderKpiCard('Executado no mês', refDate.slice(0,7), monT) +
-    renderKpiCard('Executado acumulado até a data', 'km físico — asfalto (última camada)', totT, true, asfaltoProntoKm);
+    renderKpiCard('Executado acumulado até a data', 'km físico — asfalto (última camada)', totTAjustado, true, asfaltoProntoKm);
 }
 
 function renderPeriodSummary(){
