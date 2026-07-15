@@ -821,7 +821,8 @@ function renderKPIs(){
   const monT = categoryTotals(rows=>filterMonth(rows, refDate));
   const totT = categoryTotals(rows=>filterUpTo(rows, refDate), true);
   const asfaltoProntoKm = layerCoverageKm({ds:'asfalto', field:'Camada', value:'2ª CAMADA'}, refDate);
-  const totTAjustado = {...totT, asfalto: asfaltoProntoKm};
+  const estruturaProntaKm = layerCoverageKm({ds:'solos', field:'Camada Solo', value:'BASE', excludeCamada:'RECICLAGEM'}, refDate);
+  const totTAjustado = {...totT, asfalto: asfaltoProntoKm, estrutura: estruturaProntaKm};
 
   const el = document.getElementById('kpiRow');
   el.innerHTML =
