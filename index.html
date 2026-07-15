@@ -800,7 +800,7 @@ function categoryTotals(filterFn, physical){
   return totals;
 }
 
-function renderKpiCard(label, tag, totals, isTotal, overrideValue){
+function renderKpiCard(label, tag, totals, isTotal, overrideValue, labelOverrides){
   const sum = overrideValue !== undefined ? overrideValue : CATEGORY_DEFS.reduce((a,c)=>a+totals[c.key],0);
   return `
     <div class="kpi ${isTotal?'total':''}">
@@ -808,7 +808,7 @@ function renderKpiCard(label, tag, totals, isTotal, overrideValue){
       <span class="date-tag">${tag}</span>
       <div class="value">${sum.toFixed(2)}<small> km</small></div>
       <div class="split">
-        ${CATEGORY_DEFS.map(c=>`<span><span><span class="dot" style="background:${c.color}"></span>${c.label}</span><b>${totals[c.key].toFixed(2)}</b></span>`).join('')}
+        ${CATEGORY_DEFS.map(c=>`<span><span><span class="dot" style="background:${c.color}"></span>${(labelOverrides&&labelOverrides[c.key])||c.label}</span><b>${totals[c.key].toFixed(2)}</b></span>`).join('')}
       </div>
     </div>`;
 }
@@ -820,16 +820,23 @@ function renderKPIs(){
   const weekT = categoryTotals(rows=>filterSince(rows, refDate, 7));
   const monT = categoryTotals(rows=>filterMonth(rows, refDate));
   const totT = categoryTotals(rows=>filterUpTo(rows, refDate), true);
-  const asfaltoProntoKm = layerCoverageKm({ds:'asfalto', field:'Camada', value:'2ª CAMADA'}, refDate);
-  const estruturaProntaKm = layerCoverageKm({ds:'solos', field:'Camada Solo', value:'BASE', excludeCamada:'RECICLAGEM'}, refDate);
-  const totTAjustado = {...totT, asfalto: asfaltoProntoKm, estrutura: estruturaProntaKm};
+
+  // Mesmas definições de camada usadas no painel "Avanço Físico", pra garantir
+  // que os números do acumulado batam exatamente com aquele painel.
+  const layer2aCamada = PROFILE_LAYERS.find(l=>l.value==='2ª CAMADA');
+  const layerBase = PROFILE_LAYERS.find(l=>l.value==='BASE');
+  const layerAterro = PROFILE_LAYERS.find(l=>l.value==='ATERRO');
+  const asfaltoProntoKm = layerCoverageKm(layer2aCamada, refDate);
+  const estruturaProntaKm = layerCoverageKm(layerBase, refDate);
+  const aterroFisicoKm = layerCoverageKm(layerAterro, refDate);
+  const totTAjustado = {...totT, asfalto: asfaltoProntoKm, estrutura: estruturaProntaKm, terraplanagem: aterroFisicoKm};
 
   const el = document.getElementById('kpiRow');
   el.innerHTML =
     renderKpiCard('Executado no dia', fmtBR(refDate), dayT) +
     renderKpiCard('Executado nos 7 dias anteriores', 'até '+fmtBR(refDate), weekT) +
     renderKpiCard('Executado no mês', refDate.slice(0,7), monT) +
-    renderKpiCard('Executado acumulado até a data', 'km físico — asfalto (última camada)', totTAjustado, true, asfaltoProntoKm);
+    renderKpiCard('Executado acumulado até a data', 'km físico — última camada de cada etapa', totTAjustado, true, asfaltoProntoKm, {terraplanagem:'Aterro'});
 }
 
 function renderPeriodSummary(){
