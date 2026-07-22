@@ -800,14 +800,14 @@ function categoryTotals(filterFn, physical){
   return totals;
 }
 
-function renderKpiCard(label, tag, totals, isTotal, overrideValue, labelOverrides){
+function renderKpiCard(label, tag, totals, isTotal, overrideValue, labelOverrides, hideTotal){
   const sum = overrideValue !== undefined ? overrideValue : CATEGORY_DEFS.reduce((a,c)=>a+totals[c.key],0);
   return `
     <div class="kpi ${isTotal?'total':''}">
       <div class="label">${label}</div>
       <span class="date-tag">${tag}</span>
-      <div class="value">${sum.toFixed(2)}<small> km</small></div>
-      <div class="split">
+      ${hideTotal ? '' : `<div class="value">${sum.toFixed(2)}<small> km</small></div>`}
+      <div class="split" ${hideTotal ? 'style="margin-top:14px;"' : ''}>
         ${CATEGORY_DEFS.map(c=>`<span><span><span class="dot" style="background:${c.color}"></span>${(labelOverrides&&labelOverrides[c.key])||c.label}</span><b>${totals[c.key].toFixed(2)}</b></span>`).join('')}
       </div>
     </div>`;
@@ -833,9 +833,9 @@ function renderKPIs(){
 
   const el = document.getElementById('kpiRow');
   el.innerHTML =
-    renderKpiCard('Executado no dia', fmtBR(refDate), dayT) +
-    renderKpiCard('Executado nos 7 dias anteriores', 'até '+fmtBR(refDate), weekT) +
-    renderKpiCard('Executado no mês', refDate.slice(0,7), monT) +
+    renderKpiCard('Executado no dia', fmtBR(refDate), dayT, false, undefined, undefined, true) +
+    renderKpiCard('Executado nos 7 dias anteriores', 'até '+fmtBR(refDate), weekT, false, undefined, undefined, true) +
+    renderKpiCard('Executado no mês', refDate.slice(0,7), monT, false, undefined, undefined, true) +
     renderKpiCard('Executado acumulado até a data', 'km físico — última camada de cada etapa', totTAjustado, true, asfaltoProntoKm, {terraplanagem:'Aterro'});
 }
 
