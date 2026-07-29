@@ -274,27 +274,6 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
     </div>
   </header>
 
-  <div class="panel" id="timeTravelPanel" style="margin-bottom:22px;">
-    <div class="toolbar" style="margin-bottom:0;">
-      <div>
-        <h2>Ver como estava em</h2>
-        <p class="sub" style="margin-bottom:0;">Escolha uma data — KPIs, avanço físico, planta e perfil de camadas passam a refletir esse momento</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="date" id="viewDateInput">
-        <button class="btn ghost" id="btnToday">Hoje</button>
-      </div>
-    </div>
-    <div class="date-slider-row">
-      <span class="js-date-min-label">--/--/----</span>
-      <div class="js-date-slider-wrap">
-        <input type="range" class="js-date-slider" min="0" max="1000" value="1000">
-        <div class="js-date-ticks"></div>
-      </div>
-      <span class="js-date-max-label">--/--/----</span>
-    </div>
-  </div>
-
   <div class="kpi-row" id="kpiRow"><!-- injected --></div>
 
   <div class="panel" id="periodPanel" style="margin-bottom:22px;">
@@ -319,9 +298,18 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
         <h2>Avanço físico da obra</h2>
         <p class="sub">Extensão real da rodovia coberta por camada (não soma faixas/sentidos duplicados)</p>
       </div>
-      <div style="text-align:right;font-family:var(--font-mono);">
-        <div style="font-size:11px;color:var(--ink-soft);">Extensão do projeto</div>
-        <div style="font-size:20px;font-weight:700;" id="routeExtentVal">-- km</div>
+      <div style="display:flex;align-items:center;gap:18px;">
+        <div style="text-align:right;font-family:var(--font-mono);">
+          <div style="font-size:11px;color:var(--ink-soft);">Extensão do projeto</div>
+          <div style="font-size:20px;font-weight:700;" id="routeExtentVal">-- km</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10.5px;color:var(--ink-soft);font-family:var(--font-mono);margin-bottom:5px;">Ver como estava em</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="date" id="viewDateInput">
+            <button class="btn ghost" id="btnToday">Hoje</button>
+          </div>
+        </div>
       </div>
     </div>
     <div id="physicalBars"></div>
@@ -429,11 +417,11 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
 
   <div class="panel" id="comparativoPanel" style="margin-top:16px;">
     <div class="toolbar">
-      <div>
+      <div style="flex:1;min-width:280px;">
         <h2>Comparativo de Produção</h2>
         <p class="sub">Eficiência de execução ao longo do tempo, dentro do período selecionado acima (painel "Executado em um período")</p>
       </div>
-      <div class="gran-ctl" id="granCtl">
+      <div class="gran-ctl" id="granCtl" style="flex-shrink:0;">
         <button data-g="daily" class="active">Diário</button>
         <button data-g="weekly">Semanal</button>
         <button data-g="monthly">Mensal</button>
@@ -452,11 +440,11 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
 
   <div class="panel" id="compactacaoPanel" style="margin-top:16px;">
     <div class="toolbar">
-      <div>
+      <div style="flex:1;min-width:280px;">
         <h2>Comparativo de Compactação</h2>
-        <p class="sub">Volume esperado (a partir da tonelada das escavadeiras de produção) x volume realizado (aterro, reforço do subleito e subleito liberados), dentro do período selecionado acima</p>
+        <p class="sub">Volume esperado (tonelada das escavadeiras de produção) x realizado (aterro, reforço do subleito e subleito liberados)</p>
       </div>
-      <div class="gran-ctl" id="granCtlCompactacao">
+      <div class="gran-ctl" id="granCtlCompactacao" style="flex-shrink:0;">
         <button data-g="daily" class="active">Diário</button>
         <button data-g="weekly">Semanal</button>
         <button data-g="monthly">Mensal</button>
@@ -471,7 +459,6 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       <div class="item"><span class="sw" style="background:#22C55E"></span>Realizado ≥ esperado</div>
       <div class="item"><span class="sw" style="background:#D97706"></span>Realizado &lt; esperado</div>
     </div>
-    <p class="sub" style="margin-top:10px;">Realizado = (KM Final − KM Inicial de cada furo, em metros) × 0,20 m (espessura da camada) × 12,5 m (largura da plataforma)</p>
   </div>
 
   <footer class="foot">Dados: dados.xlsx (atualização automática) · Obra 421 LRV Tripoloni · BR-163</footer>
