@@ -2033,6 +2033,8 @@ function buildFromRawWorkbook(wb){
       'KM Inicial': kmI,
       'KM Final': kmF,
       'Extensão (km)': +Math.abs(kmF-kmI).toFixed(3),
+      'Ponto Dispositivo': (rec.pontoDispositivo===undefined) ? null : rec.pontoDispositivo,
+      'Ramo Dispositivo': (rec.ramoDispositivo===undefined) ? null : rec.ramoDispositivo,
     });
   });
   asfOut.sort((a,b)=> a.Data===b.Data ? a['KM Inicial']-b['KM Inicial'] : (a.Data<b.Data?-1:1));
@@ -2061,6 +2063,8 @@ function buildFromRawWorkbook(wb){
       'KM Inicial': kmI,
       'KM Final': kmF,
       'Extensão (km)': +Math.abs(kmF-kmI).toFixed(3),
+      'Ponto Dispositivo': (r.pontoDispositivo===undefined) ? null : r.pontoDispositivo,
+      'Ramo Dispositivo': (r.ramoDispositivo===undefined) ? null : r.ramoDispositivo,
     });
   });
   solOut.sort((a,b)=> a.Data===b.Data ? a['KM Inicial']-b['KM Inicial'] : (a.Data<b.Data?-1:1));
