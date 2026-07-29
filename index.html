@@ -471,7 +471,7 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       <div class="item"><span class="sw" style="background:#22C55E"></span>Realizado ≥ esperado</div>
       <div class="item"><span class="sw" style="background:#D97706"></span>Realizado &lt; esperado</div>
     </div>
-    <p class="sub" style="margin-top:10px;">Realizado = comprimento liberado (km) × 1000 × 0,20 m (espessura da camada) × 12,5 m (largura da plataforma)</p>
+    <p class="sub" style="margin-top:10px;">Realizado = (KM Final − KM Inicial de cada furo, em metros) × 0,20 m (espessura da camada) × 12,5 m (largura da plataforma)</p>
   </div>
 
   <footer class="foot">Dados: dados.xlsx (atualização automática) · Obra 421 LRV Tripoloni · BR-163</footer>
@@ -1111,9 +1111,14 @@ let compactacaoGranularity = 'daily';
 
 function volumeRealizadoM3(rows){
   // Cada furo/liberação único conta como produção real (mesma lógica do
-  // aterroKm), convertido para m³: extensão (km) x 1000 x 0,20 x 12,5
+  // aterroKm). Comprimento do trecho = diferença entre KM Final e KM
+  // Inicial DAQUELE furo, convertida de km pra metro (x1000), vezes a
+  // espessura da camada (0,20 m) vezes a largura da plataforma (12,5 m).
   const deduped = dedupFuros(rows);
-  return deduped.reduce((a,r)=> a + ((r['Extensão (km)']||0) * 1000 * 0.20 * 12.5), 0);
+  return deduped.reduce((a,r)=>{
+    const comprimentoM = Math.abs(r['KM Final'] - r['KM Inicial']) * 1000;
+    return a + (comprimentoM * 0.20 * 12.5);
+  }, 0);
 }
 
 function renderCompactacaoChart(){
