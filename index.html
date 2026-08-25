@@ -269,10 +269,7 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-      <div style="display:flex;gap:8px;">
-        <button class="btn ghost" id="btnExportKm">⇩ Exportar relatório por km</button>
-        <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
-      </div>
+      <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
       <span id="dataSourceStatus" class="data-source-status">carregando…</span>
     </div>
   </header>
@@ -293,6 +290,16 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       </div>
     </div>
     <div id="periodResult" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="panel" id="reportPanel" style="margin-bottom:22px;">
+    <div class="toolbar" style="margin-bottom:0;">
+      <div>
+        <h2>Relatório por trecho e data</h2>
+        <p class="sub" style="margin-bottom:0;">Exporta cada liberação individual (quebrada em intervalos fechados de 1 km) — filtre por km ou data direto na planilha, usando o autofiltro já habilitado nas colunas</p>
+      </div>
+      <button class="btn primary" id="btnExportKm">⇩ Gerar e baixar relatório</button>
+    </div>
   </div>
 
   <div class="panel" id="physicalPanel" style="margin-bottom:22px;">
@@ -1936,48 +1943,57 @@ document.getElementById('granCtlCompactacao').addEventListener('click', (e)=>{
 });
 
 /* ============================================================
-   RELATÓRIO POR KM (exportação .xlsx)
-   Lista, por camada, os intervalos de km já executados até a data
-   selecionada — sem repetir/unir o que já foi contado, mas sem
-   duplicar sobreposições da mesma camada. Aterro fica com um trecho
-   por furo único (cada elevação é produção real), as demais camadas
-   ficam com os intervalos já unidos.
+   RELATÓRIO POR TRECHO E DATA (exportação .xlsx)
+   Cada liberação (registro bruto, sem unir nada) é quebrada nos
+   limites de km fechados (ex: 702-703, 703-704...), pra poder
+   filtrar exatamente o que foi executado num trecho e/ou período.
    ============================================================ */
-function buildKmReportRows(){
-  const asOfDate = viewDate;
-  const rowsSolos = [];
-  const rowsAsfalto = [];
-
-  PROFILE_LAYERS.forEach(layer=>{
-    const dataset = layer.ds==='asfalto' ? asfaltoData : solosData;
-    const rows = dataset.filter(r=> validKmRow(r) && matchesLayer(r, layer) && r['Data'] <= asOfDate);
-    const target = layer.ds==='asfalto' ? rowsAsfalto : rowsSolos;
-
-    if(layer.noMerge){
-      dedupFuros(rows).forEach(r=>{
-        const kmA = Math.min(r['KM Inicial'], r['KM Final']);
-        const kmB = Math.max(r['KM Inicial'], r['KM Final']);
-        target.push({
-          'Camada': layer.label,
-          'KM Inicial': +kmA.toFixed(3),
-          'KM Final': +kmB.toFixed(3),
-          'Extensão (km)': +(kmB-kmA).toFixed(3),
-        });
-      });
-    } else {
-      const iv = mergeIv(rows.map(r=>[Math.min(r['KM Inicial'],r['KM Final']), Math.max(r['KM Inicial'],r['KM Final'])]));
-      iv.forEach(([a,b])=>{
-        target.push({
-          'Camada': layer.label,
-          'KM Inicial': +a.toFixed(3),
-          'KM Final': +b.toFixed(3),
-          'Extensão (km)': +(b-a).toFixed(3),
-        });
-      });
+function splitRowsIntoKmBuckets(rows){
+  const out = [];
+  rows.forEach(r=>{
+    const kmA = Math.min(r['KM Inicial'], r['KM Final']);
+    const kmB = Math.max(r['KM Inicial'], r['KM Final']);
+    const startBucket = Math.floor(kmA);
+    const endBucket = Math.floor(kmB - 1e-9);
+    for(let b=startBucket; b<=endBucket; b++){
+      const segA = Math.max(kmA, b);
+      const segB = Math.min(kmB, b+1);
+      if(segB - segA <= 1e-9) continue;
+      out.push({ r, segA, segB, bucket:b });
     }
   });
+  return out;
+}
 
-  return {rowsSolos, rowsAsfalto};
+function buildKmReportRows(){
+  const headerOrder = ['Data','Camada','Sentido','Serviço','KM Inicial','KM Final','Extensão (km)','Intervalo'];
+
+  function processDataset(dataset){
+    const filtered = dataset.filter(validKmRow);
+    const segments = splitRowsIntoKmBuckets(filtered);
+    const rows = segments.map(({r, segA, segB, bucket})=>({
+      'Data': r['Data'],
+      'Camada': r['Camada'],
+      'Sentido': r['Sentido'] || '',
+      'Serviço': r['Serviço'],
+      'KM Inicial': +segA.toFixed(3),
+      'KM Final': +segB.toFixed(3),
+      'Extensão (km)': +(segB-segA).toFixed(3),
+      'Intervalo': `${bucket}-${bucket+1}`,
+    }));
+    rows.sort((a,b)=>
+      a['Intervalo'].localeCompare(b['Intervalo'], undefined, {numeric:true}) ||
+      a['Data'].localeCompare(b['Data']) ||
+      a['KM Inicial']-b['KM Inicial']
+    );
+    return rows;
+  }
+
+  return {
+    headerOrder,
+    rowsAsfalto: processDataset(asfaltoData),
+    rowsSolos: processDataset(solosData),
+  };
 }
 
 function exportKmReport(){
@@ -1985,13 +2001,24 @@ function exportKmReport(){
     alert('A biblioteca de Excel não carregou nesta rede. Tente em outra rede/Wi-Fi.');
     return;
   }
-  const {rowsSolos, rowsAsfalto} = buildKmReportRows();
+  const {headerOrder, rowsAsfalto, rowsSolos} = buildKmReportRows();
+  if(!rowsAsfalto.length && !rowsSolos.length){
+    alert('Nenhum registro encontrado.');
+    return;
+  }
+
+  function makeSheet(rows){
+    const ws = XLSX.utils.json_to_sheet(rows, {header: headerOrder});
+    const lastCol = String.fromCharCode(64 + headerOrder.length);
+    ws['!autofilter'] = { ref: `A1:${lastCol}${rows.length+1}` };
+    ws['!cols'] = headerOrder.map(()=>({wch:14}));
+    return ws;
+  }
+
   const wb = XLSX.utils.book_new();
-  const wsAsfalto = XLSX.utils.json_to_sheet(rowsAsfalto);
-  const wsSolos = XLSX.utils.json_to_sheet(rowsSolos);
-  XLSX.utils.book_append_sheet(wb, wsAsfalto, 'Asfalto');
-  XLSX.utils.book_append_sheet(wb, wsSolos, 'Solos');
-  XLSX.writeFile(wb, `relatorio_km_${viewDate}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsAsfalto), 'Asfalto');
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsSolos), 'Solos');
+  XLSX.writeFile(wb, `relatorio_por_trecho_e_data.xlsx`);
 }
 
 document.getElementById('btnExportKm').addEventListener('click', exportKmReport);
