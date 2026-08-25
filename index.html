@@ -269,7 +269,10 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-      <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn ghost" id="btnExportKm" title="Exporta cada liberação individual, quebrada em intervalos fechados de 1 km, com autofiltro habilitado — filtre por km ou data direto na planilha">⇩ Baixar relatório por trecho</button>
+        <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
+      </div>
       <span id="dataSourceStatus" class="data-source-status">carregando…</span>
     </div>
   </header>
@@ -290,16 +293,6 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       </div>
     </div>
     <div id="periodResult" style="margin-top:14px;"></div>
-  </div>
-
-  <div class="panel" id="reportPanel" style="margin-bottom:22px;">
-    <div class="toolbar" style="margin-bottom:0;">
-      <div>
-        <h2>Relatório por trecho e data</h2>
-        <p class="sub" style="margin-bottom:0;">Exporta cada liberação individual (quebrada em intervalos fechados de 1 km) — filtre por km ou data direto na planilha, usando o autofiltro já habilitado nas colunas</p>
-      </div>
-      <button class="btn primary" id="btnExportKm">⇩ Gerar e baixar relatório</button>
-    </div>
   </div>
 
   <div class="panel" id="physicalPanel" style="margin-bottom:22px;">
