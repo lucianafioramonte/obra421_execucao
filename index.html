@@ -1965,7 +1965,7 @@ function buildKmReportRows(){
     const filtered = dataset.filter(validKmRow);
     const segments = splitRowsIntoKmBuckets(filtered);
     const rows = segments.map(({r, segA, segB, bucket})=>({
-      'Data': r['Data'],
+      'DataISO': r['Data'],
       'Camada': r['Camada'],
       'Sentido': r['Sentido'] || '',
       'Serviço': r['Serviço'],
@@ -1976,10 +1976,22 @@ function buildKmReportRows(){
     }));
     rows.sort((a,b)=>
       a['Intervalo'].localeCompare(b['Intervalo'], undefined, {numeric:true}) ||
-      a['Data'].localeCompare(b['Data']) ||
+      a['DataISO'].localeCompare(b['DataISO']) ||
       a['KM Inicial']-b['KM Inicial']
     );
-    return rows;
+    // Converte a data de texto ISO para um objeto Date de verdade, só agora
+    // (depois de ordenar por texto, que é mais confiável) — assim o Excel
+    // reconhece a coluna como data, não como texto solto.
+    return rows.map(r=>({
+      'Data': parseISO(r['DataISO']),
+      'Camada': r['Camada'],
+      'Sentido': r['Sentido'],
+      'Serviço': r['Serviço'],
+      'KM Inicial': r['KM Inicial'],
+      'KM Final': r['KM Final'],
+      'Extensão (km)': r['Extensão (km)'],
+      'Intervalo': r['Intervalo'],
+    }));
   }
 
   return {
@@ -2001,10 +2013,15 @@ function exportKmReport(){
   }
 
   function makeSheet(rows){
-    const ws = XLSX.utils.json_to_sheet(rows, {header: headerOrder});
+    const ws = XLSX.utils.json_to_sheet(rows, {header: headerOrder, cellDates: true});
     const lastCol = String.fromCharCode(64 + headerOrder.length);
     ws['!autofilter'] = { ref: `A1:${lastCol}${rows.length+1}` };
     ws['!cols'] = headerOrder.map(()=>({wch:14}));
+    // Formata a coluna de Data (A) como data brasileira, célula por célula.
+    for(let i=0; i<rows.length; i++){
+      const cellRef = 'A' + (i+2);
+      if(ws[cellRef]) ws[cellRef].z = 'dd/mm/yyyy';
+    }
     return ws;
   }
 
@@ -2015,6 +2032,7 @@ function exportKmReport(){
 }
 
 document.getElementById('btnExportKm').addEventListener('click', exportKmReport);
+
 
 document.getElementById('btnReload').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnReload');
