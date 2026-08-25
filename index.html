@@ -269,7 +269,10 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-      <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn ghost" id="btnExportKm">⇩ Exportar relatório por km</button>
+        <button class="btn ghost" id="btnReload">↻ Recarregar dados</button>
+      </div>
       <span id="dataSourceStatus" class="data-source-status">carregando…</span>
     </div>
   </header>
@@ -465,6 +468,7 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
 </div>
 
 <div id="hoverTooltip" class="hover-tooltip"></div>
+
 
 
 
@@ -1930,6 +1934,67 @@ document.getElementById('granCtlCompactacao').addEventListener('click', (e)=>{
   compactacaoGranularity = btn.dataset.g;
   renderCompactacaoChart();
 });
+
+/* ============================================================
+   RELATÓRIO POR KM (exportação .xlsx)
+   Lista, por camada, os intervalos de km já executados até a data
+   selecionada — sem repetir/unir o que já foi contado, mas sem
+   duplicar sobreposições da mesma camada. Aterro fica com um trecho
+   por furo único (cada elevação é produção real), as demais camadas
+   ficam com os intervalos já unidos.
+   ============================================================ */
+function buildKmReportRows(){
+  const asOfDate = viewDate;
+  const rowsSolos = [];
+  const rowsAsfalto = [];
+
+  PROFILE_LAYERS.forEach(layer=>{
+    const dataset = layer.ds==='asfalto' ? asfaltoData : solosData;
+    const rows = dataset.filter(r=> validKmRow(r) && matchesLayer(r, layer) && r['Data'] <= asOfDate);
+    const target = layer.ds==='asfalto' ? rowsAsfalto : rowsSolos;
+
+    if(layer.noMerge){
+      dedupFuros(rows).forEach(r=>{
+        const kmA = Math.min(r['KM Inicial'], r['KM Final']);
+        const kmB = Math.max(r['KM Inicial'], r['KM Final']);
+        target.push({
+          'Camada': layer.label,
+          'KM Inicial': +kmA.toFixed(3),
+          'KM Final': +kmB.toFixed(3),
+          'Extensão (km)': +(kmB-kmA).toFixed(3),
+        });
+      });
+    } else {
+      const iv = mergeIv(rows.map(r=>[Math.min(r['KM Inicial'],r['KM Final']), Math.max(r['KM Inicial'],r['KM Final'])]));
+      iv.forEach(([a,b])=>{
+        target.push({
+          'Camada': layer.label,
+          'KM Inicial': +a.toFixed(3),
+          'KM Final': +b.toFixed(3),
+          'Extensão (km)': +(b-a).toFixed(3),
+        });
+      });
+    }
+  });
+
+  return {rowsSolos, rowsAsfalto};
+}
+
+function exportKmReport(){
+  if(!xlsxAvailable || typeof XLSX === 'undefined'){
+    alert('A biblioteca de Excel não carregou nesta rede. Tente em outra rede/Wi-Fi.');
+    return;
+  }
+  const {rowsSolos, rowsAsfalto} = buildKmReportRows();
+  const wb = XLSX.utils.book_new();
+  const wsAsfalto = XLSX.utils.json_to_sheet(rowsAsfalto);
+  const wsSolos = XLSX.utils.json_to_sheet(rowsSolos);
+  XLSX.utils.book_append_sheet(wb, wsAsfalto, 'Asfalto');
+  XLSX.utils.book_append_sheet(wb, wsSolos, 'Solos');
+  XLSX.writeFile(wb, `relatorio_km_${viewDate}.xlsx`);
+}
+
+document.getElementById('btnExportKm').addEventListener('click', exportKmReport);
 
 document.getElementById('btnReload').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnReload');
