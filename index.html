@@ -315,7 +315,12 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
         </div>
       </div>
     </div>
-    <div id="physicalBars"></div>
+    <div id="physicalBarsWrap">
+      <h3 style="font-family:var(--font-display);text-transform:uppercase;font-size:13px;color:var(--ink-soft);margin:6px 0 10px;">Duplicação</h3>
+      <div id="physicalBarsDup"></div>
+      <h3 style="font-family:var(--font-display);text-transform:uppercase;font-size:13px;color:var(--ink-soft);margin:20px 0 10px;">Restauração</h3>
+      <div id="physicalBarsRes"></div>
+    </div>
   </div>
 
   <!-- ===================== PLANTA & PERFIL DE CAMADAS ===================== -->
@@ -663,21 +668,20 @@ function matchesLayer(r, layer){
   return true;
 }
 
-function layerCoverageKm(layerDef, asOfDate){
+function layerCoverageKm(layerDef, asOfDate, servico){
   const dataset = layerDef.ds==='asfalto' ? asfaltoData : solosData;
-  const rows = dataset.filter(r=> validKmRow(r) && matchesLayer(r, layerDef) && r['Data'] <= asOfDate);
+  const rows = dataset.filter(r=> validKmRow(r) && matchesLayer(r, layerDef) && r['Data'] <= asOfDate && (!servico || r['Serviço']===servico));
   const iv = mergeIv(rows.map(r=>[Math.min(r['KM Inicial'],r['KM Final']), Math.max(r['KM Inicial'],r['KM Final'])]));
   return iv.reduce((a,r)=>a+(r[1]-r[0]),0);
 }
 
-function renderPhysicalProgress(){
+function renderPhysicalProgressFor(containerId, servico, layerWhitelist){
   const ext = routeExtent();
-  document.getElementById('routeExtentVal').textContent = ext.toFixed(2) + ' km';
-
-  const container = document.getElementById('physicalBars');
+  const container = document.getElementById(containerId);
   container.innerHTML = '';
-  PROFILE_LAYERS.forEach(layer=>{
-    const cov = layerCoverageKm(layer, viewDate);
+  const layers = layerWhitelist ? PROFILE_LAYERS.filter(l=>layerWhitelist.includes(l.label)) : PROFILE_LAYERS;
+  layers.forEach(layer=>{
+    const cov = layerCoverageKm(layer, viewDate, servico);
     const pct = ext>0 ? Math.min(100, (cov/ext)*100) : 0;
     const falta = Math.max(0, ext-cov);
     const row = document.createElement('div');
@@ -690,6 +694,13 @@ function renderPhysicalProgress(){
     `;
     container.appendChild(row);
   });
+}
+
+function renderPhysicalProgress(){
+  const ext = routeExtent();
+  document.getElementById('routeExtentVal').textContent = ext.toFixed(2) + ' km';
+  renderPhysicalProgressFor('physicalBarsDup', 'DUPLICAÇÃO', null);
+  renderPhysicalProgressFor('physicalBarsRes', 'RESTAURAÇÃO', RESTAURACAO_LABELS_PERMITIDOS);
 }
 
 /* ============================================================
@@ -887,30 +898,59 @@ function renderKpiCard(label, tag, totals, isTotal, overrideValue, labelOverride
     </div>`;
 }
 
+/* Card de volume faltante: converte o km físico que ainda falta (por
+   camada/serviço) em toneladas (CBUQ) ou m³ (sub-base/base), usando os
+   fatores de conversão informados pela obra. */
+function renderKpiCardFalta(label, tag, items){
+  return `
+    <div class="kpi">
+      <div class="label">${label}</div>
+      <span class="date-tag">${tag}</span>
+      <div class="split" style="margin-top:14px;">
+        ${items.map(it=>`<span><span><span class="dot" style="background:${it.color}"></span>${it.label}</span><b>${it.value.toFixed(1)} ${it.unit}</b></span>`).join('')}
+      </div>
+    </div>`;
+}
+
 function renderKPIs(){
   const refDate = viewDate;
 
   const dayT = categoryTotals(rows=>filterOnDate(rows, refDate));
   const weekT = categoryTotals(rows=>filterSince(rows, refDate, 7));
-  const monT = categoryTotals(rows=>filterMonth(rows, refDate));
   const totT = categoryTotals(rows=>filterUpTo(rows, refDate), true);
 
   // Mesmas definições de camada usadas no painel "Avanço Físico", pra garantir
   // que os números do acumulado batam exatamente com aquele painel.
   const layer2aCamada = PROFILE_LAYERS.find(l=>l.value==='2ª CAMADA');
   const layerBase = PROFILE_LAYERS.find(l=>l.value==='BASE');
+  const layerSubBase = PROFILE_LAYERS.find(l=>l.value==='SUB-BASE');
   const layerAterro = PROFILE_LAYERS.find(l=>l.value==='ATERRO');
   const asfaltoProntoKm = layerCoverageKm(layer2aCamada, refDate);
   const estruturaProntaKm = layerCoverageKm(layerBase, refDate);
   const aterroFisicoKm = layerCoverageKm(layerAterro, refDate);
   const totTAjustado = {...totT, asfalto: asfaltoProntoKm, estrutura: estruturaProntaKm, terraplanagem: aterroFisicoKm};
 
+  // Volume faltante: km físico que falta (por serviço, no caso do CBUQ) x
+  // fator de conversão pra tonelada/m³, combinado pela própria obra.
+  const ext = routeExtent();
+  const faltaCbuqDupKm = Math.max(0, ext - layerCoverageKm(layer2aCamada, refDate, 'DUPLICAÇÃO'));
+  const faltaCbuqResKm = Math.max(0, ext - layerCoverageKm(layer2aCamada, refDate, 'RESTAURAÇÃO'));
+  const faltaSubBaseKm = Math.max(0, ext - layerCoverageKm(layerSubBase, refDate));
+  const faltaBaseKm = Math.max(0, ext - layerCoverageKm(layerBase, refDate));
+
+  const faltaItems = [
+    {label:'CBUQ Duplicação', color:'#3d8bf2', value: faltaCbuqDupKm * 2.135, unit:'ton'},
+    {label:'CBUQ Restauração', color:'#D97706', value: faltaCbuqResKm * 2.35, unit:'ton'},
+    {label:'Sub-base', color:'#06B6D4', value: faltaSubBaseKm * 12 * 0.18, unit:'m³'},
+    {label:'Base', color:'#22C55E', value: faltaBaseKm * 11 * 0.18, unit:'m³'},
+  ];
+
   const el = document.getElementById('kpiRow');
   el.innerHTML =
     renderKpiCard('Executado no dia', fmtBR(refDate), dayT, false, undefined, undefined, true) +
     renderKpiCard('Executado nos 7 dias anteriores', 'até '+fmtBR(refDate), weekT, false, undefined, undefined, true) +
-    renderKpiCard('Executado no mês', refDate.slice(0,7), monT, false, undefined, undefined, true) +
-    renderKpiCard('Executado acumulado até a data', 'km físico — última camada de cada etapa', totTAjustado, true, asfaltoProntoKm, {terraplanagem:'Aterro'});
+    renderKpiCard('Executado acumulado até a data', 'km físico — última camada de cada etapa', totTAjustado, true, asfaltoProntoKm, {terraplanagem:'Aterro'}) +
+    renderKpiCardFalta('Falta executar (quantitativo estimado)', 'a partir do km físico faltante', faltaItems);
 }
 
 function renderPeriodSummary(){
