@@ -477,6 +477,7 @@ footer.foot{margin-top:34px;font-size:11.5px;color:var(--ink-soft);text-align:ce
 
 
 
+
 <script>
 (function(){
 "use strict";
@@ -930,19 +931,25 @@ function renderKPIs(){
   const aterroFisicoKm = layerCoverageKm(layerAterro, refDate);
   const totTAjustado = {...totT, asfalto: asfaltoProntoKm, estrutura: estruturaProntaKm, terraplanagem: aterroFisicoKm};
 
-  // Volume faltante: km físico que falta (por serviço, no caso do CBUQ) x
-  // fator de conversão pra tonelada/m³, combinado pela própria obra.
+  // Volume faltante: km físico que falta (por serviço) x fator de conversão
+  // pra tonelada/m³, combinado pela própria obra. Base e CBUQ são separados
+  // por serviço porque o Perfil de Camadas também mostra assim — evita um
+  // número combinado que não bate com nenhum dos dois painéis de perfil.
+  // Sub-base fica explícito como Duplicação, já que Restauração não tem essa
+  // camada (mesma regra do Perfil de Camadas).
   const ext = routeExtent();
   const faltaCbuqDupKm = Math.max(0, ext - layerCoverageKm(layer2aCamada, refDate, 'DUPLICAÇÃO'));
   const faltaCbuqResKm = Math.max(0, ext - layerCoverageKm(layer2aCamada, refDate, 'RESTAURAÇÃO'));
-  const faltaSubBaseKm = Math.max(0, ext - layerCoverageKm(layerSubBase, refDate));
-  const faltaBaseKm = Math.max(0, ext - layerCoverageKm(layerBase, refDate));
+  const faltaSubBaseKm = Math.max(0, ext - layerCoverageKm(layerSubBase, refDate, 'DUPLICAÇÃO'));
+  const faltaBaseDupKm = Math.max(0, ext - layerCoverageKm(layerBase, refDate, 'DUPLICAÇÃO'));
+  const faltaBaseResKm = Math.max(0, ext - layerCoverageKm(layerBase, refDate, 'RESTAURAÇÃO'));
 
   const faltaItems = [
     {label:'CBUQ Duplicação', color:'#3d8bf2', value: faltaCbuqDupKm * 2.135, unit:'ton'},
     {label:'CBUQ Restauração', color:'#D97706', value: faltaCbuqResKm * 2.35, unit:'ton'},
-    {label:'Sub-base', color:'#06B6D4', value: faltaSubBaseKm * 12 * 0.18, unit:'m³'},
-    {label:'Base', color:'#22C55E', value: faltaBaseKm * 11 * 0.18, unit:'m³'},
+    {label:'Sub-base (Duplicação)', color:'#06B6D4', value: faltaSubBaseKm * 12 * 0.18, unit:'m³'},
+    {label:'Base (Duplicação)', color:'#22C55E', value: faltaBaseDupKm * 11 * 0.18, unit:'m³'},
+    {label:'Base (Restauração)', color:'#0D9488', value: faltaBaseResKm * 11 * 0.18, unit:'m³'},
   ];
 
   const el = document.getElementById('kpiRow');
