@@ -908,7 +908,7 @@ function renderKpiCardFalta(label, tag, items){
       <div class="label">${label}</div>
       <span class="date-tag">${tag}</span>
       <div class="split" style="margin-top:14px;">
-        ${items.map(it=>`<span><span><span class="dot" style="background:${it.color}"></span>${it.label}</span><b>${it.value.toFixed(1)} ${it.unit}</b></span>`).join('')}
+        ${items.map(it=>`<span><span><span class="dot" style="background:${it.color}"></span>${it.label}</span><b>${it.value.toLocaleString('pt-BR', {maximumFractionDigits:1})} ${it.unit}</b></span>`).join('')}
       </div>
     </div>`;
 }
@@ -945,8 +945,8 @@ function renderKPIs(){
   const faltaBaseResKm = Math.max(0, ext - layerCoverageKm(layerBase, refDate, 'RESTAURAÇÃO'));
 
   const faltaItems = [
-    {label:'CBUQ Duplicação', color:'#3d8bf2', value: faltaCbuqDupKm * 2.135, unit:'ton'},
-    {label:'CBUQ Restauração', color:'#D97706', value: faltaCbuqResKm * 2.35, unit:'ton'},
+    {label:'CBUQ Duplicação', color:'#3d8bf2', value: faltaCbuqDupKm * 1000 * 2.135, unit:'ton'},
+    {label:'CBUQ Restauração', color:'#D97706', value: faltaCbuqResKm * 1000 * 2.35, unit:'ton'},
     {label:'Sub-base (Duplicação)', color:'#06B6D4', value: faltaSubBaseKm * 12 * 0.18, unit:'m³'},
     {label:'Base (Duplicação)', color:'#22C55E', value: faltaBaseDupKm * 11 * 0.18, unit:'m³'},
     {label:'Base (Restauração)', color:'#0D9488', value: faltaBaseResKm * 11 * 0.18, unit:'m³'},
