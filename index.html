@@ -947,9 +947,9 @@ function renderKPIs(){
   const faltaItems = [
     {label:'CBUQ Duplicação', color:'#3d8bf2', value: faltaCbuqDupKm * 1000 * 2.135, unit:'ton'},
     {label:'CBUQ Restauração', color:'#D97706', value: faltaCbuqResKm * 1000 * 2.35, unit:'ton'},
-    {label:'Sub-base (Duplicação)', color:'#06B6D4', value: faltaSubBaseKm * 12 * 0.18, unit:'m³'},
-    {label:'Base (Duplicação)', color:'#22C55E', value: faltaBaseDupKm * 11 * 0.18, unit:'m³'},
-    {label:'Base (Restauração)', color:'#0D9488', value: faltaBaseResKm * 11 * 0.18, unit:'m³'},
+    {label:'Sub-base (Duplicação)', color:'#06B6D4', value: faltaSubBaseKm * 1000 * 12 * 0.18, unit:'m³'},
+    {label:'Base (Duplicação)', color:'#22C55E', value: faltaBaseDupKm * 1000 * 11 * 0.18, unit:'m³'},
+    {label:'Base (Restauração)', color:'#0D9488', value: faltaBaseResKm * 1000 * 11 * 0.18, unit:'m³'},
   ];
 
   const el = document.getElementById('kpiRow');
